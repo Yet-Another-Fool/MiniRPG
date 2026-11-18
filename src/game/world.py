@@ -17,6 +17,7 @@ class World:
 
         self.world_storage = {
             'ground': [],       # list[list[str]]
+            'decors': {},       # dict[tuple, str]
             'objects': {},      # dict[tuple, str]
         }
 
@@ -27,7 +28,7 @@ class World:
         '''In blocks'''
 
         self.load_things('ground')
-        self.load_things('decors', 'ground')
+        self.load_things('decors')
         self.load_things('objects')
         self.blocks_size = (len(self.world_storage['ground'][0]), len(self.world_storage['ground']))
 

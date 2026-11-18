@@ -65,9 +65,10 @@ Chaque TODO à 3 états :
 19. #### [ ] TODO #19:
 * update la documentation, parce qu'au final je n'ai pas du tout suivi le plan du *README.md*. Essayer d'expliquer ce que j'ai fait,
 * et peut-être en profiter pour faire et ajouter le **TODO #8**.
-20. #### [ ] TODO #20:
+20. #### [x] TODO #20:
 * actuellement, quand je charge les décors, je remplace les tiles de `self.ground` par les décors présents dessus (si une tile à un décor). 
 * faut-il faire autrement ? Faut-il stocker la tile ET le décor ?
+> maintenant, les tiles sont stockées dans `self.world_storage['ground']`, et les décors dans `self.world_storage['decors']`.
 21. #### [ ] TODO #21:
 * je ne sais pas encore combien d'informations une tile contiendra, mais faut-il la transformer en objet (avec une classe) ?
 * ou faut-il juste stocker quelques informations sur elle ? 
@@ -108,6 +109,19 @@ Chaque TODO à 3 états :
 * ils peuvent être séparé en catégories (par exemple : les commits stables et les commits instables, quand on veut sauvegarder l'état actuel même si il y a des bugs)
 * on peut faire d'autres branches quand on n'est pas sûr
 * il faut faire + de commits !! un commit qui s'appelle "documentation update" ne doit changer que la documentation.
+32. #### [ ] TODO #32:
+* try to prevent the camera indicator from going outside the minimap (sometimes it's too big and it goes past the minimap border).
+33. #### [?] TODO #33:
+* make the player, and please don't mess up.
+> player made, but there are are lots of things to improve and to add.
+> currently, the player is just rendered and can move (the camera has been centered on the player), and it has basic animations and collision.
+34. #### [ ] TODO #34:
+* fix camera and player movement by using pythagorean theorem maybe ?
+35. #### [ ] TODO #35:
+* optimize the `.render_prio()` method (in `rendering.py`).
+36. #### [ ] TODO #36:
+* improve the player (add features + fix the current ones : optimize, simplify...) (use values from `config.py` instead of local variables, for example).
+* we need to add a real hitbox, an inventory, an UI, other stats, etc.
 
 <br>
 <br>
@@ -116,6 +130,7 @@ Chaque TODO à 3 états :
 * documentation à jour ?
 > ce TODO est à part car il sert à savoir si la documentation est à jour ou non.
 > il ne faut pas oublier de le décocher quand le code est modifié.
-#### [x] TODO #bonus_2:
+#### [?] TODO #bonus_2:
 * delta utilisé là où il le faut ?
 > pour ne pas oublier d'utiliser delta pour les valeurs qui sont modifiées à chaque frame
+> do we have to use delta for the player animations ?

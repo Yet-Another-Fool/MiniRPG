@@ -37,10 +37,27 @@ MINIMAP_BORDER_WIDTH                = 4 # en pixels
 # optional setting to increase the size of the camera indicator
 
 # camera
-CAMERA_SPEED                        = 3 # multipliée par delta, puis donne une valeur en pixels
-'''To be multiplied by game.delta.'''
+CAMERA_SPEED                        = 50 / (1000 / FPS)
+# 50 est la valeur que je souhaite atteindre, en pixels.
+# puisqu'elle sera multipliée par delta, je la divise d'abord par la valeur que delta est censée être (1000 / FPS), 
+# pour qu'elle soit ensuite ramenée à 50 si delta est la bonne valeur (donc sans lag).
+'''To be multiplied by game.delta. In pixels.'''
 # plus TILE_SIZE sera élevée plus la vitesse sera lente (car l'offset maximum sera plus grand)
 # il faut savoir que cette valeur sera multipliée par delta, donc par (1000 / FPS) quand il n'y a pas de lag.
+
+# player
+PLAYER_STARTING_POSITION = (0, 0)
+PLAYER_SPEED = 0.075 / (1000 / FPS)
+# same as 'CAMERA_SPEED', you can look at its explanation to understand why the math looks like this.
+'''To be multiplied by delta. In blocks size (meaning that 1 equals a speed of 1 tile).'''
+PLAYER_SKINS_PATH = f'/personnage'
+PLAYER_ANIMATIONS_STATES = {
+    "repos": ['00'],
+    "marche": ['01', '02', '03', '02'],
+}
+PLAYER_ANIMATION_WAIT = 10
+PLAYER_INDICATOR_ON_MINIMAP_SIZE = (5, 5)
+PLAYER_INDICATOR_ON_MINIMAP_COLOR = 'purple'
 
 # temporary
 GLOBAL_SIZE_FACTOR = 1
