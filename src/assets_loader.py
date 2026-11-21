@@ -17,7 +17,6 @@ class AssetsLoader:
         return self.assets[filename]
     
     def get_with_size(self, filename: str, size: tuple[int]) -> pygame.Surface: 
-        #'''If the asset is already in AssetsLoader.assets, its size won't change.'''
         '''If the asset is already in AssetsLoader.assets, its size will change. '''
         if filename not in self.assets:
             self.assets[filename] = pygame.image.load(f'{self.assets_folder}/{filename}.png')
@@ -43,5 +42,18 @@ class AssetsLoader:
 
         for f in filenames:
             self.get_with_size(f, size)
+
+    def load_multiple_original_assets(self, filenames: list[str], title: str | None) -> None:
+        '''Same as the .load_multiple_assets() method but every asset will have its original size (in the file it was loaded from).'''
+        
+        if title != None:
+            total_files = len(filenames)
+            for index, f in enumerate(filenames):
+                self.get_original(f)
+                Task.get(title).set_progess((index+1)/total_files).print_loading_bar()
+            return
+
+        for f in filenames:
+            self.get_original(f)
     
 assets = AssetsLoader(ASSETS_PATH, ASSETS_SIZES)

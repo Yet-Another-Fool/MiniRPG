@@ -122,6 +122,11 @@ Chaque TODO à 3 états :
 36. #### [ ] TODO #36:
 * improve the player (add features + fix the current ones : optimize, simplify...) (use values from `config.py` instead of local variables, for example).
 * we need to add a real hitbox, an inventory, an UI, other stats, etc.
+37. #### [ ] TODO #37;
+* problème : les objets montrés en priorités peuvent passer au-dessus d'autres objets quand le joueur s'approche (parce qu'ils sont redessinés). comment faire ?
+38. #### [ ] TODO #38:
+* lots of changes to make, i think we need to turn every object into a `Collider`.
+* we also need to make an `EntityHandler`. The `World` class will store the colliders (or maybe a new `ColliderHandler` class ?), the `EntityHandler` the entities.
 
 <br>
 <br>
@@ -134,3 +139,11 @@ Chaque TODO à 3 états :
 * delta utilisé là où il le faut ?
 > pour ne pas oublier d'utiliser delta pour les valeurs qui sont modifiées à chaque frame
 > do we have to use delta for the player animations ?
+#### [ ] TODO #bonus_3:
+* actuellement, le code est mal modularisé et documenté. 
+* la structure actuelle relie les classes entre elles à travers `Game`, mais cela ne sert à rien parce qu'elles vont 'chercher' des valeurs elles-mêmes plutôt que des les 'demander'.
+* par exemple, `Rendering` utilise `self.game.world.world_storage['ground']` plutôt que quelque chose comme `self.game.get_ground()`, ce qui permettrai moins de bugs et une structure + modularisée
+> le code doit être bien modularisé
+> le code doit être bien commenté et documenté
+> le code doit être bien typé
+

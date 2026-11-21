@@ -1,9 +1,11 @@
 
 import pygame
-from config import MINIMAP_CURRENT_FORMAT, MINIMAP_DECALAGE, MINIMAP_SIZE_DIVIDER, TILE_SIZE, ADDED_SAFETY_TILES, MINIMAP_CAMERA_INDICATOR_COLOR, MINIMAP_CAMERA_INDICATOR_WITDH, MINIMAP_CAMERA_INDICATOR_ADDED_SIZE, MINIMAP_BORDER_COLOR, MINIMAP_BORDER_WIDTH, PLAYER_INDICATOR_ON_MINIMAP_COLOR
+import math
+from config import MINIMAP_CURRENT_FORMAT, MINIMAP_DECALAGE, MINIMAP_SIZE_DIVIDER, TILE_SIZE, ADDED_SAFETY_TILES, RENDER_HITBOXES, MINIMAP_CAMERA_INDICATOR_COLOR, MINIMAP_CAMERA_INDICATOR_WITDH, MINIMAP_CAMERA_INDICATOR_ADDED_SIZE, MINIMAP_BORDER_COLOR, MINIMAP_BORDER_WIDTH, PLAYER_PRIO_DISTANCE, PLAYER_SHOW_PRIO_DETECTOR
 from assets_loader import assets
 from task import Task
 from .game import Game
+from utils import clamp
 
 class Rendering:
     def __init__(self, game: Game):
@@ -18,13 +20,6 @@ class Rendering:
         self.priority_render: list[tuple[tuple, str]] = []
 
         self.compute_minimap()
-
-    def __clamp(self, n: int | float, a: int | float, b: int | float):
-        if n <= a:
-            return a
-        if n >= b:
-            return b
-        return n
 
     def compute_minimap(self):
         size_divider = MINIMAP_SIZE_DIVIDER
@@ -78,12 +73,13 @@ class Rendering:
         )
 
     def change_offset(self, *, dx: int = 0, dy: int = 0):
-        self.offset_x = self.__clamp(self.offset_x + dx, -self.max_x, 0)
-        self.offset_y = self.__clamp(self.offset_y + dy, -self.max_y, 0)
+        self.offset_x = clamp(self.offset_x + dx, -self.max_x, 0)
+        self.offset_y = clamp(self.offset_y + dy, -self.max_y, 0)
+        #self.game.get_player().calc_position_on_screen()
 
     def set_offset(self, x: int, y: int):
-        self.offset_x = self.__clamp(x, -self.max_x, 0)
-        self.offset_y = self.__clamp(y, -self.max_y, 0)
+        self.offset_x = clamp(x, -self.max_x, 0)
+        self.offset_y = clamp(y, -self.max_y, 0)
 
     def get_visible_things(self, things: list | dict) -> list[tuple[str, tuple[float, float]]]:
         '''
@@ -143,39 +139,27 @@ class Rendering:
             self.game.screen.blit(assets.get(thing), position)
 
     def render_prio(self, things: list | dict):
-        temp_radius = 1
-        real_player_pos = self.game.player.position_on_screen
+        real_player_pos = self.game.get_player().position_on_screen
         visible_things = self.get_visible_things(things)
-        
-        positions_under_player = set()
-        positions_under_player.add(real_player_pos)
-        for _ in range(1, temp_radius+1):
-            new = set()
-            for pos in positions_under_player:
-                new.add((pos[0] - TILE_SIZE, pos[1] + TILE_SIZE))
-                new.add((pos[0], pos[1] + TILE_SIZE))
-                new.add((pos[0] + TILE_SIZE, pos[1] + TILE_SIZE))
-            positions_under_player.update(new)
-        positions_under_player.discard(real_player_pos)
 
-        # for p in positions_under_player:
-        #     pygame.draw.rect(self.game.screen, 'red', (p[0], p[1], TILE_SIZE, TILE_SIZE))
+        def calc_distance(point_a, point_b):
+            return math.sqrt((point_b[0] - point_a[0]) ** 2 + (point_b[1] - point_a[1]) ** 2)
 
-        priority_things = []
-        for thing in visible_things:
-            for pos in positions_under_player:
-                within_x = abs(pos[0] - thing[0][0]) <= TILE_SIZE
-                within_y = pos[1] - thing[0][1] <= TILE_SIZE # on n'utilise pas abs() pour éviter d'ajouter quelque chose au-dessus du joueur
-                if within_x and within_y:
-                    priority_things.append(thing)
-                    break
+        max_range = PLAYER_PRIO_DISTANCE * TILE_SIZE
 
-        for position, thing in priority_things: 
-            self.game.screen.blit(assets.get(thing), position)
+        if PLAYER_SHOW_PRIO_DETECTOR:
+            circle_center = (real_player_pos[0] + self.game.get_player().size[0] * 1.5, real_player_pos[1] + self.game.get_player().size[1])
+            # not the real center, but better visually
+            pygame.draw.circle(self.game.screen, 'red', circle_center, max_range, width=10, draw_bottom_left=True, draw_bottom_right=True)
+
+        for position, thing in visible_things:
+            if position[1] >= real_player_pos[1]: # check if the object is under the player
+                if calc_distance(real_player_pos, position) <= max_range:
+                    self.game.screen.blit(assets.get(thing), position)
 
     def render_player(self):
-        #pygame.draw.rect(self.game.screen, 'purple', self.game.player.hitbox_on_screen)
-        self.game.screen.blit(assets.get(self.game.player.current_skin), self.game.player.position_on_screen)
+        #pygame.draw.rect(self.game.screen, 'purple', self.game.get_player().hitbox_on_screen)
+        self.game.screen.blit(assets.get(self.game.get_player().get_skin()), self.game.get_player().position_on_screen)
 
     def render_minimap(self):
         # minimap tiles
@@ -192,21 +176,35 @@ class Rendering:
 
         # player indicator
         player_indicator_on_minimap = (
-            self.minimap_position[0] + self.game.player.position[0] * self.minimap_tile_size[0],
-            self.minimap_position[1] + self.game.player.position[1] * self.minimap_tile_size[1],
-            self.game.player.indicator_on_minimap_size[0],
-            self.game.player.indicator_on_minimap_size[1],
+            self.minimap_position[0] + self.game.get_player().position[0] * self.minimap_tile_size[0],
+            self.minimap_position[1] + self.game.get_player().position[1] * self.minimap_tile_size[1],
+            self.game.get_player().indicator_on_minimap_size[0],
+            self.game.get_player().indicator_on_minimap_size[1],
         )
-        pygame.draw.rect(self.game.screen, self.game.player.indicator_on_minimap_color, player_indicator_on_minimap)
+        pygame.draw.rect(self.game.screen, self.game.get_player().indicator_on_minimap_color, player_indicator_on_minimap)
 
         # minimap borders
         pygame.draw.rect(self.game.screen, self.minimap_border[0], self.minimap_border[1], width=self.minimap_border[2])
+
+    def render_hitboxes(self):
+        if not RENDER_HITBOXES:
+            return
+        for collider in self.game.world.loaded_colliders.values():
+            pygame.draw.rect(self.game.screen, 'red', collider.hitbox_on_screen)
+        for entity in self.game.world.loaded_entities.values():
+            pygame.draw.rect(self.game.screen, 'red', entity.hitbox_on_screen)
+
+    def render_entities(self):
+        for entity in self.game.world.loaded_entities.values():
+            self.game.screen.blit(assets.get(entity.get_skin()), entity.position_on_screen)
         
     def render(self):
         self.game.screen.fill(("black"))
         self.render_visible_things(self.game.world.world_storage['ground']) # renders tiles
         self.render_visible_things(self.game.world.world_storage['decors']) # renders decors
+        self.render_hitboxes()
         self.render_visible_things(self.game.world.world_storage['objects']) # renders objects
-        self.render_player() # renders the player
+        #elf.render_player() # renders the player
+        self.render_entities()
         self.render_prio(self.game.world.world_storage['objects']) # renders objects that are under the player on screen, so that the player appears behind them
         self.render_minimap() # renders the minimap
