@@ -24,7 +24,8 @@ class AssetsLoader:
         return self.assets[filename]
 
     def get_original(self, filename: str) -> pygame.Surface:
-        '''Same as the .get() method but returns the asset with its original size (in the file it was loaded from).'''
+        '''Same as the .get() method but returns the asset with its original size (in the file it was loaded from). 
+        Only useful if the size of the asset has been changed with .get_with_size(), because otherwise both methods are the same (well, almost).'''
         if filename not in self.assets_original_sizes:
             self.assets_original_sizes[filename] = pygame.image.load(f'{self.assets_folder}/{filename}.png')
         return self.assets_original_sizes[filename]

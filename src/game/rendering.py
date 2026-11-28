@@ -81,7 +81,7 @@ class Rendering:
         self.offset_x = clamp(x, -self.max_x, 0)
         self.offset_y = clamp(y, -self.max_y, 0)
 
-    def get_visible_things(self, things: list | dict) -> list[tuple[str, tuple[float, float]]]:
+    def get_visible_things(self, things: list | dict, it_already_has_a_pos=False) -> list[tuple[str, tuple[float, float]]]:
         '''
         The goal of this method is to only render things that are within the screen.
         - This method takes either a list or a dict of things that are within the world.
@@ -89,7 +89,9 @@ class Rendering:
         - If it is a dict, each key is a pair of coordinates representing a tile, and each value an element.
         - Either way, an element is just the path to its asset.
         - It returns the list of visible things, with each element being a tuple : an str (its asset filepath) and a position on the screen (a tuple of 2 floats).
+        - The parameter 'it_already_has_a_pos' is temporary, and used for Collider and Entity things, because the calculated pos would be wrong otherwise.
         '''
+        # TODO: find a cleaner way that using 'it_already_has_a_pos'
         visible_things = []
         blocks = self.game.world.blocks_size
         
@@ -138,8 +140,13 @@ class Rendering:
         for position, thing in things_to_render:
             self.game.screen.blit(assets.get(thing), position)
 
+    def render_visible_colliders(self, colliders: dict): # temporary
+        # TODO: find a better way to render the colliders (because the pos calculated by .get_visible_things() is wrong for them, and that's why we need this function)
+        for collider in colliders.values():
+            self.game.screen.blit(assets.get(collider.name), collider.surface_position_on_screen)
+
     def render_prio(self, things: list | dict):
-        real_player_pos = self.game.get_player().position_on_screen
+        real_player_pos = self.game.get_player().surface_position_on_screen
         visible_things = self.get_visible_things(things)
 
         def calc_distance(point_a, point_b):
@@ -148,7 +155,7 @@ class Rendering:
         max_range = PLAYER_PRIO_DISTANCE * TILE_SIZE
 
         if PLAYER_SHOW_PRIO_DETECTOR:
-            circle_center = (real_player_pos[0] + self.game.get_player().size[0] * 1.5, real_player_pos[1] + self.game.get_player().size[1])
+            circle_center = (real_player_pos[0] + self.game.get_player().hitbox_on_screen[2], real_player_pos[1] + self.game.get_player().hitbox_on_screen[3])
             # not the real center, but better visually
             pygame.draw.circle(self.game.screen, 'red', circle_center, max_range, width=10, draw_bottom_left=True, draw_bottom_right=True)
 
@@ -157,9 +164,19 @@ class Rendering:
                 if calc_distance(real_player_pos, position) <= max_range:
                     self.game.screen.blit(assets.get(thing), position)
 
+    def render_prio_v2(self, colliders: dict): # temporary
+        # TODO: same problem as .render_visible_colliders()
+        player = self.game.get_player()
+        max_range = PLAYER_PRIO_DISTANCE
+        for collider in colliders.values():
+            if collider.position[1] >= player.position[1]: # check if the object is under the player
+                #if collider.calc_distance(player) <= max_range:
+                if collider.calc_distance_squared(player) <= max_range ** 2:
+                    self.game.screen.blit(assets.get(collider.name), collider.surface_position_on_screen)
+
     def render_player(self):
-        #pygame.draw.rect(self.game.screen, 'purple', self.game.get_player().hitbox_on_screen)
-        self.game.screen.blit(assets.get(self.game.get_player().get_skin()), self.game.get_player().position_on_screen)
+        self.game.screen.blit(assets.get(self.game.get_player().get_skin()), self.game.get_player().surface_position_on_screen)
+        # only useful if we want to render the player separately from other entities
 
     def render_minimap(self):
         # minimap tiles
@@ -189,22 +206,27 @@ class Rendering:
     def render_hitboxes(self):
         if not RENDER_HITBOXES:
             return
+        
         for collider in self.game.world.loaded_colliders.values():
-            pygame.draw.rect(self.game.screen, 'red', collider.hitbox_on_screen)
+            if collider.hitbox_on_screen != None:
+                pygame.draw.rect(self.game.screen, 'red', collider.hitbox_on_screen, width=5)
         for entity in self.game.world.loaded_entities.values():
-            pygame.draw.rect(self.game.screen, 'red', entity.hitbox_on_screen)
+            if entity.hitbox_on_screen != None:
+                pygame.draw.rect(self.game.screen, 'red', entity.hitbox_on_screen, width=5)
 
     def render_entities(self):
         for entity in self.game.world.loaded_entities.values():
-            self.game.screen.blit(assets.get(entity.get_skin()), entity.position_on_screen)
+            self.game.screen.blit(assets.get(entity.get_skin()), entity.surface_position_on_screen)
         
     def render(self):
         self.game.screen.fill(("black"))
         self.render_visible_things(self.game.world.world_storage['ground']) # renders tiles
         self.render_visible_things(self.game.world.world_storage['decors']) # renders decors
         self.render_hitboxes()
-        self.render_visible_things(self.game.world.world_storage['objects']) # renders objects
-        #elf.render_player() # renders the player
+        #self.render_visible_things(self.game.world.world_storage['objects']) # renders objects
+        self.render_visible_colliders(self.game.world.loaded_colliders)
+        #self.render_player() # renders the player
         self.render_entities()
-        self.render_prio(self.game.world.world_storage['objects']) # renders objects that are under the player on screen, so that the player appears behind them
+        #self.render_prio(self.game.world.world_storage['objects']) # renders objects that are under the player on screen, so that the player appears behind them
+        self.render_prio_v2(self.game.world.loaded_colliders)
         self.render_minimap() # renders the minimap

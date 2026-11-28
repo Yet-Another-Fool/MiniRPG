@@ -2,7 +2,7 @@ import pygame
 import csv
 from .collider_and_entity import Collider, Entity
 from .player import Player
-from config import TILE_SIZE, PLAYER_STARTING_POSITION, FRICTION
+from config import TILE_SIZE, PLAYER_SKINS_PATH, PLAYER_STARTING_POSITION, ADDITIVE_FRICTION, MULTIPLICATIVE_FRICTION, COLLIDERS_REAL_SIZE
 from assets_loader import assets
 from task import Task
 from .game import Game
@@ -85,22 +85,43 @@ class World:
                         if element not in filenames:
                             filenames.append(element)
 
-        assets.load_multiple_assets(filenames, (TILE_SIZE, TILE_SIZE), f'{filepath_name} assets')
-        #assets.load_multiple_original_assets(filenames, f'{filepath_name} assets')
+        if not COLLIDERS_REAL_SIZE:
+            assets.load_multiple_assets(filenames, (TILE_SIZE, TILE_SIZE), f'{filepath_name} assets')
+        else:
+            assets.load_multiple_original_assets(filenames, f'{filepath_name} assets')
 
     def load_colliders(self):
         index = 0
         total = len(self.world_storage['objects'])
         for position, name in self.world_storage['objects'].items():
-            collider = Collider(name, position)
+            collider = Collider(name, name, position)
             self.add_collider(name, collider)
             Task.get('colliders').set_progess((index + 1) / total).print_loading_bar()
             index += 1
 
     def load_entities(self): # TODO (linked to the SavesHandler maybe ? or just a dict of entities in config.py ?)
-        self.make_player()
-        self.add_entity('player', Player('player', (10, 10), (0, self.blocks_size[0]), (0, self.blocks_size[1])))
-        Task.get('entities').set_progess(1).print_loading_bar() # temporary
+        entities_to_load = [ # temporary
+            {'name':'player', 'asset_filepath':f'{PLAYER_SKINS_PATH}personnage sud 00', 'starting_position':PLAYER_STARTING_POSITION, 'x_interval':(0, self.blocks_size[0] - 1), 'y_interval':(0, self.blocks_size[1] - 1)},
+            {'name':'player', 'asset_filepath':f'{PLAYER_SKINS_PATH}personnage sud 00', 'starting_position':(0, 0), 'x_interval':(0, self.blocks_size[0] - 1), 'y_interval':(0, self.blocks_size[1] - 1)},
+            {'name':'player', 'asset_filepath':f'{PLAYER_SKINS_PATH}personnage sud 00', 'starting_position':(200, 0), 'x_interval':(0, self.blocks_size[0] - 1), 'y_interval':(0, self.blocks_size[1] - 1)},
+            {'name':'player', 'asset_filepath':f'{PLAYER_SKINS_PATH}personnage sud 00', 'starting_position':(0, 190), 'x_interval':(0, self.blocks_size[0] - 1), 'y_interval':(0, self.blocks_size[1] - 1)},
+            {'name':'player', 'asset_filepath':f'{PLAYER_SKINS_PATH}personnage sud 00', 'starting_position':(200, 190), 'x_interval':(0, self.blocks_size[0] - 1), 'y_interval':(0, self.blocks_size[1] - 1)},
+        ]
+        # TODO: je ne sais pas pourquoi il faut le '-1' pour les intervalles, mais sans lui l'entité peut sortir de la map. le but serait de trouver pourquoi, et comment le fix.
+
+        total = len(entities_to_load)
+        for index, entity_dict in enumerate(entities_to_load):
+            if entity_dict['name'] == 'player':
+                entity = Player(entity_dict['name'], entity_dict['asset_filepath'], entity_dict['starting_position'], entity_dict['x_interval'], entity_dict['y_interval'])
+            else:
+                entity = Entity(entity_dict['name'], entity_dict['asset_filepath'], entity_dict['starting_position'], entity_dict['x_interval'], entity_dict['y_interval'])
+            # TODO: is there a better way to do this ? is there a way to not check the name of the entity and still create it using the right class ?
+
+            self.add_entity(entity_dict['name'], entity)
+            Task.get('entities').set_progess((index+1)/total).print_loading_bar()
+
+        #TODO: all those players are temporary, it's only to explore the map faster by using entity switching (pressing 'C'), 
+        # and it makes my life easier (walking is too slow, i dont have the patience :) )
 
     def add_collider(self, collider_name, collider: 'Collider'):
         i = 0
@@ -120,17 +141,14 @@ class World:
                 break
             i += 1
 
-    def make_player(self):
-        player = Player('player', PLAYER_STARTING_POSITION, (0, self.blocks_size[0]), (0, self.blocks_size[1]))
-        self.add_entity('player', player)
-
     def compute_loaded_colliders(self):
         '''This method detects which colliders are currently in range and stores them in 'self.loaded_colliders'. 
         Colliders outside of this range will not be checked for collisons (to prevent lag).'''
         self.loaded_colliders = {}
         player = self.entities[self.game.player_id]
         for id, collider in self.colliders.items():
-            if collider.calc_distance(player) <= self.collider_range:
+            #if collider.calc_distance(player) <= self.collider_range:
+            if collider.calc_distance_squared(player) <= self.collider_range ** 2:
                 collider.calc_position_on_screen(self.game.rendering.offset_x, self.game.rendering.offset_y)
                 self.loaded_colliders[id] = collider
 
@@ -140,11 +158,12 @@ class World:
         self.loaded_entities = {}
         player = self.entities[self.game.player_id]
         for id, entity in self.entities.items():
-            if entity.calc_distance(player) <= self.entity_range:
+            #if entity.calc_distance(player) <= self.entity_range:
+            if entity.calc_distance_squared(player) <= self.entity_range ** 2:
                 entity.calc_position_on_screen(self.game.rendering.offset_x, self.game.rendering.offset_y)
                 self.loaded_entities[id] = entity
 
-    def compute_movements(self):
+    def compute_movements(self, delta: int):
         self.compute_loaded_colliders()
         self.compute_loaded_entities()        
 
@@ -157,14 +176,16 @@ class World:
                 collisions_list.append(value)
             # to only keep the hitboxes to check in a list (no need for a dict)
 
-            self.entities[id].apply_movement(collisions_list, self.game.rendering.offset_x, self.game.rendering.offset_y)
-            self.entities[id].apply_friction(FRICTION, self.game.delta)
-            # est-ce que cela modifiera aussi la position des entités dans 'loaded_entities' ? 
+            #self.entities[id].apply_movement(delta, collisions_list, self.game.rendering.offset_x, self.game.rendering.offset_y)
+            self.entities[id].apply_movement_v2(delta, collisions_list, self.game.rendering.offset_x, self.game.rendering.offset_y)
+            #self.entities[id].apply_additive_friction(ADDITIVE_FRICTION, self.game.delta)
+            self.entities[id].apply_multiplicative_friction(MULTIPLICATIVE_FRICTION, self.game.delta)
+            self.entities[id].compute_animation()
+            #self.entities[id].print_velocity()
+            self.loaded_entities[id] = self.entities[id] # pour update à la fois dans 'loaded_entities' et 'entities'
             # parce que sinon bugs :/
             # >> exemple : entity_1 bouge de (0, 1) en (1, 1). entity_2 bouge de (1, 0) en (1, 1). 
-            # >> est-ce que leurs positions seront aussi modifiées dans loaded_entities ? parce que sinon, la collision ne sera pas détectée.
-
-            self.loaded_entities[id] = self.entities[id] # pour update (est-ce que ça empeche les bugs ? est-ce que ça update bien l'entité ? est-ce qu'il y a meme besoin de cette ligne ?)
+            # >>           si on update pas entity_1 dans loaded_entities, entity_2 pourra aussi aller en (1, 1).
 
         self.center_camera(self.game.player_id)
 

@@ -9,4 +9,5 @@ def main():
 
     pygame.quit()
 
-main()
+if __name__ == '__main__': # not very useful since we dont import 'main' but it's fancy and i like it :)
+    main()

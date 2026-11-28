@@ -124,18 +124,31 @@ Chaque TODO à 3 états :
 * we need to add a real hitbox, an inventory, an UI, other stats, etc.
 37. #### [ ] TODO #37;
 * problème : les objets montrés en priorités peuvent passer au-dessus d'autres objets quand le joueur s'approche (parce qu'ils sont redessinés). comment faire ?
-38. #### [ ] TODO #38:
+38. #### [?] TODO #38:
 * lots of changes to make, i think we need to turn every object into a `Collider`.
 * we also need to make an `EntityHandler`. The `World` class will store the colliders (or maybe a new `ColliderHandler` class ?), the `EntityHandler` the entities.
+> now, the `World` class stores both colliders and entities.
+39. #### [x] TODO #39:
+* for calculating an entity's movement, should we use a `pygame.math.Vector2` instead of just `dx` and `dy` ?
+40. #### [?] TODO #40:
+* instead of initializing some values divided by `EXPECTED_DELTA` (in `config.py`), maybe we should just pass `delta / EXPECTED_DELTA` as an argument (instead of just `delta`)
+> actually, I dont think we need to pass `delta / EXPECTED_DELTA`, we only need to pass `delta / 1000`, because before it was in milliseconds but it needs to be in seconds
+41. #### [?] TODO #41:
+* improve the collision system
+> well... I mean... it's improved, right ? :)
+42. #### [ ] TODO #42:
+* maybe reorganize variables in `config.py`
+43. #### [ ] TODO #43:
+* pour la direction de l'asset du joueur, peut-être comparer dx et dy et utiliser le + élevé en priorité (plutot que juste dy)
 
 <br>
 <br>
 
+## Ces TODO sont à part car il servent à savoir si certains éléments du projet sont à jour ou non.
 #### [ ] TODO #bonus_1:
 * documentation à jour ?
-> ce TODO est à part car il sert à savoir si la documentation est à jour ou non.
 > il ne faut pas oublier de le décocher quand le code est modifié.
-#### [?] TODO #bonus_2:
+#### [ ] TODO #bonus_2:
 * delta utilisé là où il le faut ?
 > pour ne pas oublier d'utiliser delta pour les valeurs qui sont modifiées à chaque frame
 > do we have to use delta for the player animations ?

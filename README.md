@@ -1,3 +1,5 @@
+# /!\ ATTENTION ! LA DOCUMENTATION N'EST ABSOLUMENT PAS À JOUR !!
+
 # Projet : RPG 2D pygame
 ## Liste d'idées non organisées :)
 
